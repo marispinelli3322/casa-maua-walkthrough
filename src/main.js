@@ -16,10 +16,9 @@ async function init() {
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x8fad8f, 0.008);
 
-  // Camera — eye height ~1.7m above floor (floor at y=1.15)
+  // Camera
   camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 200);
-  camera.position.set(5, 2.85, -14); // Start outside, facing the front deck
-  camera.lookAt(3.7, 2.85, -8);
+  camera.position.set(5, 2.85, -14);
 
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -50,32 +49,13 @@ async function init() {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('welcome').style.display = 'flex';
 
-  // Click hint element
-  const clickHint = document.getElementById('click-hint');
-
   // Enter button
   document.getElementById('enter-btn').addEventListener('click', () => {
     document.getElementById('welcome').style.display = 'none';
     document.getElementById('hud').style.display = 'block';
-    controlsState = setupControls(camera, renderer.domElement, scene);
+
+    controlsState = setupControls(camera, renderer.domElement);
     setupMinimap(houseGroup);
-
-    // Pointer lock events
-    document.addEventListener('pointerlockchange', () => {
-      if (document.pointerLockElement === renderer.domElement) {
-        clickHint.style.display = 'none';
-      } else {
-        clickHint.style.display = 'block';
-      }
-    });
-
-    // Click hint also re-locks
-    clickHint.addEventListener('click', () => {
-      renderer.domElement.requestPointerLock();
-    });
-
-    // Initial lock
-    renderer.domElement.requestPointerLock();
 
     if (!animating) {
       animating = true;
@@ -103,11 +83,10 @@ async function init() {
 
 function animate() {
   requestAnimationFrame(animate);
-
-  const delta = Math.min(clock.getDelta(), 0.1); // cap delta to prevent huge jumps
+  const delta = Math.min(clock.getDelta(), 0.1);
 
   if (controlsState) {
-    updateControls(controlsState, delta);
+    updateControls(controlsState, camera, delta);
     checkPointsOfInterest(camera);
     updateMinimap(camera);
   }

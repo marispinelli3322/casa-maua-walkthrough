@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casa Mau&aacute; - Walkthrough Imersivo</title>
+  <title>Las Casitas - Walkthrough Imersivo</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { overflow: hidden; background: #1a1a1a; font-family: 'Segoe UI', system-ui, sans-serif; }
-    canvas { display: block; }
+    canvas { display: block; cursor: grab; }
+    canvas:active { cursor: grabbing; }
 
     /* Welcome screen */
     #welcome {
@@ -25,20 +26,13 @@
       text-align: center;
       color: #f0ebe4;
     }
-    #welcome-card h1 {
-      font-size: 28px; font-weight: 300; margin-bottom: 6px;
-      letter-spacing: 2px; text-transform: uppercase;
-    }
     #welcome-card .subtitle {
       font-size: 13px; color: rgba(240,235,228,0.5); margin-bottom: 32px;
       letter-spacing: 1px;
     }
-    #welcome-card .house-icon {
-      font-size: 64px; margin-bottom: 24px; display: block;
-    }
     .controls-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-      margin-bottom: 32px; text-align: left;
+      margin-bottom: 24px; text-align: left;
     }
     .control-item {
       display: flex; align-items: center; gap: 10px;
@@ -89,20 +83,6 @@
     /* HUD */
     #hud { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; pointer-events: none; }
 
-    /* Crosshair */
-    #crosshair {
-      position: absolute; top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 20px; height: 20px;
-      opacity: 0.4;
-    }
-    #crosshair::before, #crosshair::after {
-      content: ''; position: absolute;
-      background: white; border-radius: 1px;
-    }
-    #crosshair::before { width: 2px; height: 20px; left: 9px; top: 0; }
-    #crosshair::after { width: 20px; height: 2px; left: 0; top: 9px; }
-
     /* Point of interest overlay */
     #poi-overlay {
       position: absolute; bottom: 40px; left: 50%;
@@ -142,13 +122,8 @@
       text-transform: uppercase; display: block;
       margin-bottom: 6px; opacity: 0.6;
     }
-    #time-slider {
-      width: 120px; accent-color: #8B6F47;
-    }
-    #time-label {
-      font-size: 13px; text-align: center;
-      margin-top: 4px;
-    }
+    #time-slider { width: 120px; accent-color: #8B6F47; }
+    #time-label { font-size: 13px; text-align: center; margin-top: 4px; }
 
     /* Minimap */
     #minimap {
@@ -160,27 +135,21 @@
       border: 1px solid rgba(255,255,255,0.1);
       overflow: hidden;
     }
-    #minimap canvas {
-      width: 100%; height: 100%;
-    }
+    #minimap canvas { width: 100%; height: 100%; }
 
-    /* Pause hint */
-    #pause-hint {
+    /* Controls hint */
+    #controls-hint {
       position: absolute; top: 20px; left: 50%;
       transform: translateX(-50%);
-      font-size: 11px; color: rgba(255,255,255,0.3);
+      font-size: 11px; color: rgba(255,255,255,0.4);
       letter-spacing: 1px;
+      background: rgba(0,0,0,0.3);
+      padding: 6px 16px; border-radius: 8px;
     }
 
-    /* Mobile warning */
-    #mobile-controls {
-      display: none;
-      position: absolute; bottom: 20px; left: 20px;
-      pointer-events: all;
-    }
     @media (max-width: 768px) {
-      #mobile-controls { display: block; }
       .controls-grid { grid-template-columns: 1fr; }
+      #minimap { width: 120px; height: 120px; }
     }
   </style>
 </head>
@@ -199,21 +168,17 @@
       <div class="subtitle" style="margin-bottom: 8px;">Mau&aacute; da Serra &middot; Rio de Janeiro</div>
       <div class="subtitle">Projeto Paula Neder &middot; Ricardo Moyano</div>
       <div class="controls-grid">
-        <div class="control-item"><span class="key">&uarr; &darr; &larr; &rarr;</span> Andar</div>
-        <div class="control-item"><span class="key">Mouse</span> Olhar</div>
+        <div class="control-item"><span class="key">&uarr; &darr; &larr; &rarr;</span> Caminhar</div>
+        <div class="control-item"><span class="key">Arrastar mouse</span> Olhar</div>
         <div class="control-item"><span class="key">Shift</span> Correr</div>
-        <div class="control-item"><span class="key">ESC</span> Pausar</div>
+        <div class="control-item"><span class="key">Toque</span> Celular</div>
       </div>
-      <p style="font-size: 11px; color: rgba(240,235,228,0.4); margin-bottom: 24px;">
-        Clique na tela para capturar o mouse. Use as setas do teclado para caminhar.
-      </p>
       <button id="enter-btn">Entrar na Casa</button>
     </div>
   </div>
 
   <!-- HUD -->
   <div id="hud" style="display:none">
-    <div id="crosshair"></div>
     <div id="poi-overlay">
       <h3 id="poi-name"></h3>
       <p id="poi-desc"></p>
@@ -223,13 +188,8 @@
       <input type="range" id="time-slider" min="0" max="24" step="0.5" value="10">
       <div id="time-label">10:00</div>
     </div>
-    <div id="pause-hint">ESC para pausar</div>
-    <div id="click-hint" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      background:rgba(0,0,0,0.8); backdrop-filter:blur(12px); border-radius:16px; padding:24px 40px;
-      color:white; text-align:center; pointer-events:all; cursor:pointer; z-index:50;">
-      <div style="font-size:14px; letter-spacing:1px; margin-bottom:8px;">Clique para continuar navegando</div>
-      <div style="font-size:11px; color:rgba(255,255,255,0.5);">Setas = andar &middot; Mouse = olhar &middot; ESC = pausar</div>
-    </div>
+    <div id="controls-hint">Setas = caminhar &middot; Arrastar mouse = olhar</div>
+    <div id="minimap"></div>
   </div>
 
   <script type="module" src="/src/main.js"></script>

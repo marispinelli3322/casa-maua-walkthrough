@@ -1,139 +1,145 @@
 import * as THREE from 'three';
-import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-const WALK_SPEED = 3.5; // m/s
-const RUN_SPEED = 7.0;
-const EYE_HEIGHT = 1.70; // meters above current floor
-const GRAVITY = -15;
-const JUMP_FORCE = 6;
+const WALK_SPEED = 4.0;
+const RUN_SPEED = 8.0;
+const EYE_HEIGHT = 1.70;
+const MOUSE_SENSITIVITY = 0.003;
 
-// Simple collision boundaries (axis-aligned boxes from the model)
-// We keep the player within reasonable bounds and above floor surfaces
-const FLOOR_LEVELS = [
-  { minX: -2, maxX: 14, minZ: -2, maxZ: 15, y: 1.15 },   // Main floor
-  { minX: 0.5, maxX: 6.5, minZ: -5.2, maxZ: -0.5, y: 4.20 }, // Mezzanine (after rotation z->-y mapping)
-];
-
-export function setupControls(camera, domElement, scene) {
-  const controls = new PointerLockControls(camera, domElement);
-
+export function setupControls(camera, domElement) {
   const state = {
-    controls,
-    velocity: new THREE.Vector3(),
-    direction: new THREE.Vector3(),
     moveForward: false,
     moveBackward: false,
     moveLeft: false,
     moveRight: false,
     isRunning: false,
-    canJump: false,
-    playerY: 1.15 + EYE_HEIGHT, // Start on main floor
-    verticalVelocity: 0,
+    // Euler angles for camera look
+    yaw: Math.PI,   // Start looking toward house (north)
+    pitch: 0,
+    isDragging: false,
+    lastMouseX: 0,
+    lastMouseY: 0,
   };
 
-  // Pointer lock events
-  controls.addEventListener('lock', () => {
-    document.getElementById('pause-hint').style.opacity = '0.3';
-  });
-
-  controls.addEventListener('unlock', () => {
-    document.getElementById('pause-hint').style.opacity = '1';
-  });
-
-  // Click to re-lock
-  domElement.addEventListener('click', () => {
-    if (!controls.isLocked) {
-      controls.lock();
-    }
-  });
-
-  // Keyboard
+  // --- KEYBOARD ---
   document.addEventListener('keydown', (e) => {
     switch (e.code) {
-      case 'KeyW': case 'ArrowUp': state.moveForward = true; break;
-      case 'KeyS': case 'ArrowDown': state.moveBackward = true; break;
-      case 'KeyA': case 'ArrowLeft': state.moveLeft = true; break;
-      case 'KeyD': case 'ArrowRight': state.moveRight = true; break;
+      case 'ArrowUp': case 'KeyW': state.moveForward = true; e.preventDefault(); break;
+      case 'ArrowDown': case 'KeyS': state.moveBackward = true; e.preventDefault(); break;
+      case 'ArrowLeft': case 'KeyA': state.moveLeft = true; e.preventDefault(); break;
+      case 'ArrowRight': case 'KeyD': state.moveRight = true; e.preventDefault(); break;
       case 'ShiftLeft': case 'ShiftRight': state.isRunning = true; break;
-      case 'Space':
-        if (state.canJump) {
-          state.verticalVelocity = JUMP_FORCE;
-          state.canJump = false;
-        }
-        break;
     }
   });
 
   document.addEventListener('keyup', (e) => {
     switch (e.code) {
-      case 'KeyW': case 'ArrowUp': state.moveForward = false; break;
-      case 'KeyS': case 'ArrowDown': state.moveBackward = false; break;
-      case 'KeyA': case 'ArrowLeft': state.moveLeft = false; break;
-      case 'KeyD': case 'ArrowRight': state.moveRight = false; break;
+      case 'ArrowUp': case 'KeyW': state.moveForward = false; break;
+      case 'ArrowDown': case 'KeyS': state.moveBackward = false; break;
+      case 'ArrowLeft': case 'KeyA': state.moveLeft = false; break;
+      case 'ArrowRight': case 'KeyD': state.moveRight = false; break;
       case 'ShiftLeft': case 'ShiftRight': state.isRunning = false; break;
     }
   });
 
+  // --- MOUSE DRAG TO LOOK ---
+  domElement.addEventListener('mousedown', (e) => {
+    state.isDragging = true;
+    state.lastMouseX = e.clientX;
+    state.lastMouseY = e.clientY;
+    domElement.style.cursor = 'grabbing';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!state.isDragging) return;
+
+    const dx = e.clientX - state.lastMouseX;
+    const dy = e.clientY - state.lastMouseY;
+    state.lastMouseX = e.clientX;
+    state.lastMouseY = e.clientY;
+
+    state.yaw -= dx * MOUSE_SENSITIVITY;
+    state.pitch -= dy * MOUSE_SENSITIVITY;
+    // Clamp pitch to avoid flipping
+    state.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, state.pitch));
+  });
+
+  document.addEventListener('mouseup', () => {
+    state.isDragging = false;
+    domElement.style.cursor = 'grab';
+  });
+
+  // --- TOUCH SUPPORT (mobile) ---
+  let touchStartX = 0, touchStartY = 0;
+
+  domElement.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  domElement.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1) {
+      const dx = e.touches[0].clientX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+
+      state.yaw -= dx * MOUSE_SENSITIVITY;
+      state.pitch -= dy * MOUSE_SENSITIVITY;
+      state.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, state.pitch));
+    }
+  }, { passive: true });
+
+  // Set initial cursor
+  domElement.style.cursor = 'grab';
+
   return state;
 }
 
-function getFloorHeight(x, z, currentY) {
-  // After model rotation (-PI/2 on X): OBJ(x,y,z) -> Three.js(x, z, -y)
-  // Floor slab at OBJ z=1.15 -> Three.js y=1.15
-
-  // Deck area (front)
-  if (z < -8.5 && z > -15) {
-    return 1.04;
-  }
-
-  // Main floor + annexe
-  if (x >= -0.5 && x <= 12.5 && z >= -9 && z <= 0.5) {
-    return 1.15;
-  }
-
-  // Outside on terrain
+function getFloorHeight(x, z) {
+  // Deck area
+  if (z < -8.5 && z > -15) return 1.04;
+  // Main floor + annex
+  if (x >= -0.5 && x <= 12.5 && z >= -9 && z <= 0.5) return 1.15;
+  // Terrain
   return 0.0;
 }
 
-export function updateControls(state, delta) {
-  if (!state.controls.isLocked) return;
+export function updateControls(state, camera, delta) {
+  // Update camera rotation from yaw/pitch
+  const euler = new THREE.Euler(state.pitch, state.yaw, 0, 'YXZ');
+  camera.quaternion.setFromEuler(euler);
 
+  // Movement direction based on where camera is looking (horizontal only)
   const speed = state.isRunning ? RUN_SPEED : WALK_SPEED;
+  const forward = new THREE.Vector3(0, 0, -1);
+  forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), state.yaw);
+  forward.y = 0;
+  forward.normalize();
 
-  // Damping
-  state.velocity.x -= state.velocity.x * 8.0 * delta;
-  state.velocity.z -= state.velocity.z * 8.0 * delta;
+  const right = new THREE.Vector3(1, 0, 0);
+  right.applyAxisAngle(new THREE.Vector3(0, 1, 0), state.yaw);
+  right.y = 0;
+  right.normalize();
 
-  // Direction from input
-  state.direction.z = Number(state.moveForward) - Number(state.moveBackward);
-  state.direction.x = Number(state.moveRight) - Number(state.moveLeft);
-  state.direction.normalize();
+  const move = new THREE.Vector3(0, 0, 0);
 
-  if (state.moveForward || state.moveBackward) {
-    state.velocity.z -= state.direction.z * speed * delta * 20;
+  if (state.moveForward) move.add(forward);
+  if (state.moveBackward) move.sub(forward);
+  if (state.moveRight) move.add(right);
+  if (state.moveLeft) move.sub(right);
+
+  if (move.length() > 0) {
+    move.normalize().multiplyScalar(speed * delta);
+    camera.position.add(move);
   }
-  if (state.moveLeft || state.moveRight) {
-    state.velocity.x -= state.direction.x * speed * delta * 20;
-  }
 
-  // Apply movement
-  state.controls.moveRight(-state.velocity.x * delta);
-  state.controls.moveForward(-state.velocity.z * delta);
-
-  // Gravity
-  const camera = state.controls.getObject();
+  // Keep on floor
   const floorY = getFloorHeight(camera.position.x, camera.position.z) + EYE_HEIGHT;
+  camera.position.y = floorY;
 
-  state.verticalVelocity += GRAVITY * delta;
-  camera.position.y += state.verticalVelocity * delta;
-
-  if (camera.position.y < floorY) {
-    camera.position.y = floorY;
-    state.verticalVelocity = 0;
-    state.canJump = true;
-  }
-
-  // Keep within world bounds
+  // World bounds
   camera.position.x = Math.max(-20, Math.min(26, camera.position.x));
   camera.position.z = Math.max(-26, Math.min(16, camera.position.z));
 }
