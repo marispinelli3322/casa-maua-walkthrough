@@ -1,0 +1,15 @@
+{
+  "name": "casa-maua-walkthrough",
+  "version": "1.0.0",
+  "description": "Walkthrough imersivo 3D da casa A-frame em Maua - Projeto Paula Neder",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.183.2",
+    "vite": "^7.3.1"
+  }
+}
