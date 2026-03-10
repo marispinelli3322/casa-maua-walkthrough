@@ -13,7 +13,7 @@ export function setupControls(camera, domElement) {
     moveRight: false,
     isRunning: false,
     // Euler angles for camera look
-    yaw: Math.PI,   // Start looking toward house (north)
+    yaw: 0,   // Start looking toward house (toward positive Z = front facade)
     pitch: 0,
     isDragging: false,
     lastMouseX: 0,

@@ -5,8 +5,9 @@ import { setupControls, updateControls } from './controls.js';
 import { checkPointsOfInterest } from './poi.js';
 import { setupMinimap, updateMinimap } from './minimap.js';
 import { setupEnvironment } from './environment.js';
+import { setupPostProcessing, resizePostProcessing } from './postprocessing.js';
 
-let scene, camera, renderer, clock;
+let scene, camera, renderer, clock, composer;
 let controlsState;
 let timeOfDay = 10;
 let animating = false;
@@ -16,9 +17,9 @@ async function init() {
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x8fad8f, 0.008);
 
-  // Camera
+  // Camera — start in front of the house, looking at the A-frame facade
   camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 200);
-  camera.position.set(5, 2.85, -14);
+  camera.position.set(4, 1.7, -18);
 
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -38,6 +39,9 @@ async function init() {
 
   // Lighting
   setupLighting(scene, timeOfDay);
+
+  // Post-processing (SSAO + Bloom)
+  composer = setupPostProcessing(renderer, scene, camera);
 
   // Load model
   const loaderFill = document.getElementById('loader-fill');
@@ -78,6 +82,7 @@ async function init() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    if (composer) resizePostProcessing(composer, window.innerWidth, window.innerHeight);
   });
 }
 
@@ -91,7 +96,7 @@ function animate() {
     updateMinimap(camera);
   }
 
-  renderer.render(scene, camera);
+  composer.render();
 }
 
 init().catch(console.error);
