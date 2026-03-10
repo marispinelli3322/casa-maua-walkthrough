@@ -77,43 +77,21 @@ export function setupControls(camera, domElement, scene) {
   return state;
 }
 
-function getFloorHeight(x, z) {
-  // After the model rotation (-90 on X), the OBJ Y becomes Three.js -Z
-  // and OBJ Z becomes Three.js Y.
-  // The model coordinates: x stays x, OBJ y -> Three.js z (negated due to rotation), OBJ z -> Three.js y
-  // Actually with rotation.x = -PI/2: (x, y, z) -> (x, z, -y)
-  // So floor at OBJ z=1.15 -> Three.js y=1.15 (after rotation the plane is at y=1.15)
+function getFloorHeight(x, z, currentY) {
+  // After model rotation (-PI/2 on X): OBJ(x,y,z) -> Three.js(x, z, -y)
+  // Floor slab at OBJ z=1.15 -> Three.js y=1.15
 
-  // Mezzanine: check if player is above 3m and within mezzanine footprint
-  // Mezzanine in model: x=[0.55, 6.40], y=[0.55, 5.15], z=4.20
-  // After rotation: x stays, z=-y (so z=[-5.15, -0.55]), y=4.20
-  if (x >= 0.5 && x <= 6.5 && z >= -5.15 && z <= -0.55) {
-    // Player could be on mezzanine if they climbed stairs
-    return 4.20;
-  }
-
-  // Deck: z=0.92 in model -> after rotation, deck is at y=0.92
-  // Deck in model: various positions, but main deck y=[8.60, 12.20]
-  // After rotation: z = -y = [-12.20, -8.60]
+  // Deck area (front)
   if (z < -8.5 && z > -15) {
-    return 1.04; // Deck top
+    return 1.04;
   }
 
-  // Annex terrace: z=4.20 in model
-  // Annex in model: x=[7.40, 12.20], y=[1.90, 6.00]
-  // After rotation: x stays, z=[-6.00, -1.90]
-  if (x >= 7.3 && x <= 12.3 && z >= -6.1 && z <= -1.8) {
-    // Could be on terrace (roof of annex) at y=4.20
-    // Only if they're high enough (came from stairs)
-    return 1.15; // Default to main floor level for now
-  }
-
-  // Main floor
+  // Main floor + annexe
   if (x >= -0.5 && x <= 12.5 && z >= -9 && z <= 0.5) {
     return 1.15;
   }
 
-  // Terrain
+  // Outside on terrain
   return 0.0;
 }
 

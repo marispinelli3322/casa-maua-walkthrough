@@ -187,15 +187,16 @@
 <body>
   <!-- Loading screen -->
   <div id="loading">
-    <div style="font-size: 14px; letter-spacing: 2px; text-transform: uppercase;">Carregando Casa Mau&aacute;</div>
+    <img src="/logo.png" alt="Las Casitas" style="width: 120px; margin-bottom: 24px; filter: brightness(10);">
+    <div style="font-size: 14px; letter-spacing: 2px; text-transform: uppercase;">Carregando...</div>
     <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
   </div>
 
   <!-- Welcome screen -->
   <div id="welcome" style="display:none">
     <div id="welcome-card">
-      <span class="house-icon">&#127969;</span>
-      <h1>Casa Mau&aacute;</h1>
+      <img src="/logo.png" alt="Las Casitas" style="width: 180px; margin-bottom: 16px; filter: brightness(10);">
+      <div class="subtitle" style="margin-bottom: 8px;">Mau&aacute; da Serra &middot; Rio de Janeiro</div>
       <div class="subtitle">Projeto Paula Neder &middot; Ricardo Moyano</div>
       <div class="controls-grid">
         <div class="control-item"><span class="key">W A S D</span> Andar</div>
@@ -203,6 +204,9 @@
         <div class="control-item"><span class="key">Shift</span> Correr</div>
         <div class="control-item"><span class="key">ESC</span> Pausar</div>
       </div>
+      <p style="font-size: 11px; color: rgba(240,235,228,0.4); margin-bottom: 24px;">
+        Clique na tela para capturar o mouse. Use WASD para caminhar pela casa.
+      </p>
       <button id="enter-btn">Entrar na Casa</button>
     </div>
   </div>
@@ -220,6 +224,12 @@
       <div id="time-label">10:00</div>
     </div>
     <div id="pause-hint">ESC para pausar</div>
+    <div id="click-hint" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:rgba(0,0,0,0.8); backdrop-filter:blur(12px); border-radius:16px; padding:24px 40px;
+      color:white; text-align:center; pointer-events:all; cursor:pointer; z-index:50;">
+      <div style="font-size:14px; letter-spacing:1px; margin-bottom:8px;">Clique para continuar navegando</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.5);">WASD = andar &middot; Mouse = olhar &middot; ESC = pausar</div>
+    </div>
   </div>
 
   <script type="module" src="/src/main.js"></script>

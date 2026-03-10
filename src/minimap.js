@@ -1,18 +1,11 @@
+import * as THREE from 'three';
+
 let minimapCanvas, minimapCtx;
-let houseGroup;
+const _dir = new THREE.Vector3();
 
-// House footprint in OBJ coords (before rotation)
-// Main block: x=[0, 7.40], y=[0, 8.60]
-// Annex: x=[7.40, 12.20], y=[1.90, 6.00]
-// Deck: x=[-1.10, 12.20], y=[8.60, 12.20]
-// Pool: x=[7.10, 9.90], y=[9.10, 11.90]
-
-// After rotation: OBJ(x,y,z) -> Three.js(x, z, -y)
-// So in minimap we show Three.js X (horizontal) and Three.js -Z (vertical, up = north)
-
-const SCALE = 8; // pixels per meter
-const OFFSET_X = 30; // pixel offset
-const OFFSET_Z = 130; // pixel offset (since z is negative in Three.js)
+const SCALE = 8;
+const OFFSET_X = 30;
+const OFFSET_Z = 130;
 
 function worldToMinimap(wx, wz) {
   return {
@@ -42,7 +35,7 @@ export function updateMinimap(camera) {
   ctx.fillStyle = 'rgba(74, 107, 58, 0.3)';
   ctx.fillRect(0, 0, 160, 160);
 
-  // Draw house footprint (main block)
+  // Main block
   ctx.fillStyle = 'rgba(240, 236, 230, 0.5)';
   const main = worldToMinimap(0, 0);
   ctx.fillRect(main.x, main.y - 8.60 * SCALE, 7.40 * SCALE, 8.60 * SCALE);
@@ -62,7 +55,7 @@ export function updateMinimap(camera) {
   const pool = worldToMinimap(7.10, -9.10);
   ctx.fillRect(pool.x, pool.y - 2.80 * SCALE, 2.80 * SCALE, 2.80 * SCALE);
 
-  // Room labels (tiny)
+  // Room labels
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '6px sans-serif';
   const labelSala = worldToMinimap(1.5, -5.5);
@@ -79,13 +72,12 @@ export function updateMinimap(camera) {
   ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
   ctx.fill();
 
-  // Player direction indicator
-  const forward = { x: 0, y: 0, z: 0 };
-  camera.getWorldDirection(forward);
+  // Player direction
+  camera.getWorldDirection(_dir);
   ctx.strokeStyle = '#ff4444';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(pos.x, pos.y);
-  ctx.lineTo(pos.x + forward.x * 10, pos.y + forward.z * 10);
+  ctx.lineTo(pos.x + _dir.x * 10, pos.y + _dir.z * 10);
   ctx.stroke();
 }

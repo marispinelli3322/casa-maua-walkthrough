@@ -9,16 +9,17 @@ import { setupEnvironment } from './environment.js';
 let scene, camera, renderer, clock;
 let controlsState;
 let timeOfDay = 10;
+let animating = false;
 
 async function init() {
   // Scene
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x8fad8f, 0.012);
+  scene.fog = new THREE.FogExp2(0x8fad8f, 0.008);
 
-  // Camera — eye height ~1.7m above floor (floor is at y=1.15 in the model)
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
-  camera.position.set(5, 2.85, 14); // Start outside, looking at front deck
-  camera.lookAt(3.7, 2.85, 8);
+  // Camera — eye height ~1.7m above floor (floor at y=1.15)
+  camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(5, 2.85, -14); // Start outside, facing the front deck
+  camera.lookAt(3.7, 2.85, -8);
 
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -27,13 +28,13 @@ async function init() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.4;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.body.insertBefore(renderer.domElement, document.body.firstChild);
 
   clock = new THREE.Clock();
 
-  // Environment (sky, ground beyond model)
+  // Environment
   setupEnvironment(scene);
 
   // Lighting
@@ -49,14 +50,37 @@ async function init() {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('welcome').style.display = 'flex';
 
+  // Click hint element
+  const clickHint = document.getElementById('click-hint');
+
   // Enter button
   document.getElementById('enter-btn').addEventListener('click', () => {
     document.getElementById('welcome').style.display = 'none';
     document.getElementById('hud').style.display = 'block';
     controlsState = setupControls(camera, renderer.domElement, scene);
-    renderer.domElement.requestPointerLock();
     setupMinimap(houseGroup);
-    animate();
+
+    // Pointer lock events
+    document.addEventListener('pointerlockchange', () => {
+      if (document.pointerLockElement === renderer.domElement) {
+        clickHint.style.display = 'none';
+      } else {
+        clickHint.style.display = 'block';
+      }
+    });
+
+    // Click hint also re-locks
+    clickHint.addEventListener('click', () => {
+      renderer.domElement.requestPointerLock();
+    });
+
+    // Initial lock
+    renderer.domElement.requestPointerLock();
+
+    if (!animating) {
+      animating = true;
+      animate();
+    }
   });
 
   // Time of day slider
@@ -79,7 +103,8 @@ async function init() {
 
 function animate() {
   requestAnimationFrame(animate);
-  const delta = clock.getDelta();
+
+  const delta = Math.min(clock.getDelta(), 0.1); // cap delta to prevent huge jumps
 
   if (controlsState) {
     updateControls(controlsState, delta);
